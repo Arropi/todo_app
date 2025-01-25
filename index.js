@@ -125,7 +125,7 @@ app.post('/login', (req, res) => {
                     }
                     if ( await bcrypt.compare(password, datas.password_hash)) {
                         const secret = process.env.SECRET_TOKEN
-                        const accessToken = jwt.sign(data, secret, {expiresIn: 60*2})
+                        const accessToken = jwt.sign(data, secret, {expiresIn: 60*60*24})
                         res.status(200).json({
                             "message": "Login berhasil",
                             "datas" : data,
