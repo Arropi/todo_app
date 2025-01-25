@@ -1,4 +1,5 @@
 const express = require('express')
+require('dotenv').config()
 const port = 3000
 const app = express()
 const body = require('body-parser')
@@ -20,6 +21,46 @@ db.connect(err=> {
 
 const validationAccess = (req, res, next) =>{
     const {authorization} = req.headers
+    if (!authorization) {
+        console.log('siap')
+        return res.status(403).json({
+            "message": "Membutuhkan token"
+        })
+    } 
+    try {
+        const secret = process.env.SECRET_TOKEN
+        const token = authorization.split(' ')[1]
+        const jwtDecode = jwt.verify(token, secret)
+        req.user = jwtDecode
+        next()
+    } catch (error) {
+        console.log('Ok')
+        return res.status(401).json({
+            "messagge": "Authorize gagal"
+        })
+    }
+}
+
+const validationInput = (req, res, next) => {
+    const {title, due_date, priority, is_completed} = req.body
+
+    if (title == null) {
+        res.status(400).json({
+            "message": "title tidak boleh kosong"
+        })
+    } else if ( due_date == null) {
+        res.status(400).json({
+            "message": "due date tidak boleh kosong"
+        })
+    } else if ( priority == null) {
+        res.status(400).json({
+            "message": "priority tidak boleh kosong"
+        })
+    } else if ( due_date == null) {
+        res.status(400).json({
+            "message": "completion status tidak boleh kosong"
+        })
+    }
 }
 
 app.get('/', (req, res) =>{
@@ -83,7 +124,8 @@ app.post('/login', (req, res) => {
                         "email": datas.email
                     }
                     if ( await bcrypt.compare(password, datas.password_hash)) {
-                        const accessToken = jwt.sign(data, process.env.SECRET_TOKEN, {expiresIn: 60*2})
+                        const secret = process.env.SECRET_TOKEN
+                        const accessToken = jwt.sign(data, secret, {expiresIn: 60*2})
                         res.status(200).json({
                             "message": "Login berhasil",
                             "datas" : data,
@@ -105,17 +147,27 @@ app.post('/login', (req, res) => {
 
 // RETRIEVE DATA TODO
 app.get('/todos', validationAccess, (req,res) =>{
-    const {userId} = req.headers 
-    db.query(`SELECT * FROM todos_tbl WHERE user_id = ${userId}`, (err, fields) =>{
+    const { user_id } = req.user
+    console.log( user_id )
+    console.log('ok')
+    db.query(`SELECT todo_id, title, description, due_date, priority, is_completed FROM todos_tbl WHERE user_id = ${user_id}`, (err, fields) =>{
         if (err) {
-            res.status(500).json({
-                "error": err.message
-            })
+            ResponseServerError(err, res)
         }
+        console.log(fields.rows)
     })
 })  
 
-app.post('/todos', (req,res) =>{
+app.post('/todos', validationAccess, validationInput, (req,res) =>{
+    const { user_id } = req.user
+    db.query(`INSERT INTO todos_tbl (title, description)`, (err, fields) =>{
+        if (err) {
+            ResponseServerError(err, res)
+        }
+    })
+})
+
+app.get('/todos/:id', validationAccess, (req,res) =>{
     const {userId} = req.headers 
     db.query(`SELECT * FROM todos_tbl WHERE user_id = ${userId}`, (err, fields) =>{
         if (err) {
@@ -124,16 +176,7 @@ app.post('/todos', (req,res) =>{
     })
 })
 
-app.get('/todos/:id', (req,res) =>{
-    const {userId} = req.headers 
-    db.query(`SELECT * FROM todos_tbl WHERE user_id = ${userId}`, (err, fields) =>{
-        if (err) {
-            ResponseServerError(err, res)
-        }
-    })
-})
-
-app.put('/todos/:id', (req,res) =>{
+app.put('/todos/:id', validationAccess, (req,res) =>{
     const {userId} = req.headers 
     db.query(`SELECT * FROM todos_tbl WHERE user_id = ${userId}`, (err, fields) =>{
         if (err) {
@@ -146,9 +189,7 @@ app.delete('/todos/:id', (req,res) =>{
     const {userId} = req.body
     db.query(`SELECT * FROM todos_tbl WHERE user_id = ${userId}`, (err, fields) =>{
         if (err) {
-            res.status(500).json({
-                "error": err.message
-            })
+            ResponseServerError(err, res)
         }
     })
 })
