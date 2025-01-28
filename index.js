@@ -41,28 +41,6 @@ const validationAccess = (req, res, next) =>{
     }
 }
 
-const validationInput = (req, res, next) => {
-    const {title, due_date, priority, is_completed} = req.body
-
-    if (title == null) {
-        res.status(400).json({
-            "message": "title tidak boleh kosong"
-        })
-    } else if ( due_date == null) {
-        res.status(400).json({
-            "message": "due date tidak boleh kosong"
-        })
-    } else if ( priority == null) {
-        res.status(400).json({
-            "message": "priority tidak boleh kosong"
-        })
-    } else if ( due_date == null) {
-        res.status(400).json({
-            "message": "completion status tidak boleh kosong"
-        })
-    }
-}
-
 app.get('/', (req, res) =>{
     res.json({
         'message': 'Welcome To ToDo List App'
@@ -148,48 +126,101 @@ app.post('/login', (req, res) => {
 // RETRIEVE DATA TODO
 app.get('/todos', validationAccess, (req,res) =>{
     const { user_id } = req.user
-    console.log( user_id )
-    console.log('ok')
-    db.query(`SELECT todo_id, title, description, due_date, priority, is_completed FROM todos_tbl WHERE user_id = ${user_id}`, (err, fields) =>{
+    db.query(`SELECT todo_id, title, description, to_char(due_date, 'YYYY-MM-DD') as due_date , priority, is_completed FROM todos_tbl WHERE user_id = ${user_id}`, (err, fields) =>{
         if (err) {
-            ResponseServerError(err, res)
+            return ResponseServerError(err, res)
         }
-        console.log(fields.rows)
+        if (fields.rowCount === 0 ){
+            ResponseMessageServer(404, "User ini belum pernah membuat to do list", res)
+        } else {
+            const datas = fields.rows
+            res.status(200).json({
+                "message": "Data berhasil didapatkan",
+                "datas": datas
+            })
+        }
     })
 })  
 
-app.post('/todos', validationAccess, validationInput, (req,res) =>{
+app.post('/todos', validationAccess, (req,res) =>{
     const { user_id } = req.user
-    db.query(`INSERT INTO todos_tbl (title, description)`, (err, fields) =>{
+    let { title, description, due_date, priority, is_completed } = req.body
+    if ( !title ) {
+        return ResponseMessageServer(403, "Title tidak boleh kosong", res)
+    }
+    due_date = due_date ?? null
+    description = description ?? null
+    priority = priority ?? null
+    is_completed = is_completed ?? null
+    console.log(user_id,title, description, priority, due_date, is_completed)
+    db.query(`INSERT INTO todos_tbl (user_id, title, description, due_date, priority, is_completed) VALUES (${user_id}, $1, $2, $3, $4, $5) RETURNING todo_id, title, description, due_date, priority, is_completed`,[title, description, due_date, priority, is_completed], (err, fields) =>{
         if (err) {
-            ResponseServerError(err, res)
+            return ResponseServerError(err, res)
+        } else {
+            const data = fields.rows
+            return res.status(201).json({
+                "message": "Data berhasil dimasukkan",
+                "datas" : data
+            })
         }
     })
 })
 
 app.get('/todos/:id', validationAccess, (req,res) =>{
-    const {userId} = req.headers 
-    db.query(`SELECT * FROM todos_tbl WHERE user_id = ${userId}`, (err, fields) =>{
+    const { user_id } = req.user
+    const todo_id = req.params.id
+    db.query(`SELECT todo_id, title, description, to_char(due_date, 'YYYY-MM-DD') as due_date , priority, is_completed FROM todos_tbl WHERE todo_id = ${todo_id} AND user_id = ${user_id}`, (err, fields) =>{
+        datas = fields.rows
         if (err) {
-            ResponseServerError(err, res)
+            return ResponseServerError(err, res)
+        }
+        if (fields.rowCount === 0) {
+            return ResponseMessageServer(404, "To Do tidak ditemukan", res)
+        } else {
+            res.status(200).json({
+                "message" : `Data Dengan User id = ${user_id} & Todo id = ${todo_id} `,
+                "datas" : datas
+            })
         }
     })
 })
 
 app.put('/todos/:id', validationAccess, (req,res) =>{
-    const {userId} = req.headers 
-    db.query(`SELECT * FROM todos_tbl WHERE user_id = ${userId}`, (err, fields) =>{
+    const { user_id } = req.user
+    const todo_id = req.params.id
+    let { title, description, due_date, priority, is_completed } = req.body
+    title = title ?? null 
+    due_date = due_date ?? null
+    description = description ?? null
+    priority = priority ?? null
+    is_completed = is_completed ?? null
+    db.query(`UPDATE todos_tbl SET title = COALESCE($1, title), description = COALESCE($2, description), due_date = COALESCE($3, due_date), priority = COALESCE($4, priority) , is_completed = COALESCE($5, is_completed) WHERE user_id = ${user_id} AND todo_id = ${todo_id} RETURNING todo_id, title, description, to_char(due_date, 'YYYY-MM-DD') as due_date, priority, is_completed`, [title, description, due_date, priority, is_completed], (err, fields) =>{
         if (err) {
-            ResponseServerError(err, res)
+            return ResponseServerError(err, res)
+        }
+        if (fields.rowCount === 0) {
+            ResponseMessageServer(404, "To Do tidak ditemukan", res)
+        } else {
+            datas = fields.rows
+            return res.status(200).json({
+                "message": "Data berhasil diupdate",
+                "datas" : datas
+            })
         }
     })
 })
 
 app.delete('/todos/:id', (req,res) =>{
-    const {userId} = req.body
-    db.query(`SELECT * FROM todos_tbl WHERE user_id = ${userId}`, (err, fields) =>{
+    const { user_id } = req.user
+    const todo_id = req.params.id
+    db.query(`DELETE FROM todos_tbl WHERE user_id = ${user_id} AND todo_id = ${todo_id}`, (err, fields) =>{
         if (err) {
-            ResponseServerError(err, res)
+            return ResponseServerError(err, res)
+        }
+        if (fields.rowCount === 0) {
+            ResponseMessageServer(404, "To Do tidak ditemukan", res)
+        } else {
+            ResponseMessageServer(200, `To Do dengan user id ${user_id} dan todo id ${todo_id} berhasil dihapus`)
         }
     })
 })
