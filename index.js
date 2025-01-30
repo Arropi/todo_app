@@ -89,7 +89,7 @@ app.post('/login', (req, res) => {
     } else {
         db.query(`SELECT user_id, email, password_hash FROM users_tbl WHERE email = '${email}'`, async (err, fields)=>{
             if (err) {
-                ResponseServerError(err, res)
+                return ResponseServerError(err, res)
             } else {
                 if (fields.rowCount === 0){
                     res.status(403).json({
