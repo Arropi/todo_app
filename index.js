@@ -126,25 +126,66 @@ app.post('/login', (req, res) => {
 // RETRIEVE DATA TODO
 app.get('/todos', validationAccess, (req,res) =>{
     const { user_id } = req.user
-    db.query(`SELECT todo_id, title, description, to_char(due_date, 'YYYY-MM-DD') as due_date , priority, is_completed FROM todos_tbl WHERE user_id = ${user_id}`, (err, fields) =>{
-        if (err) {
-            return ResponseServerError(err, res)
-        }
-        if (fields.rowCount === 0 ){
-            ResponseMessageServer(404, "User ini belum pernah membuat to do list", res)
-        } else {
-            const datas = fields.rows
+    const search = req.query.search
+    const {is_completed, start, end, priority} = req.query
+    if (search) {
+        db.query(`SELECT todo_id, title, description, to_char(due_date, 'YYYY-MM-DD') as due_date , priority, is_completed FROM todos_tbl WHERE user_id = ${user_id} AND title ILIKE '%${search}%'`, (err, fields)=>{
+            if (err) {
+                return ResponseServerError(err, res)
+            }
+            datas = fields.rows
             res.status(200).json({
-                "message": "Data berhasil didapatkan",
+                "message": `Data Dengan User id ${user_id} Berhasil Diambil`,
                 "datas": datas
             })
+        })
+    } else if (is_completed || start || end || priority) {
+        let query = `SELECT todo_id, title, description, to_char(due_date, 'YYYY-MM-DD') as due_date , priority, is_completed FROM todos_tbl WHERE user_id = ${user_id}`
+        if (is_completed) {
+            query += ` AND is_completed = '${is_completed}'`
         }
-    })
+        if (start) {
+            query += ` AND due_date >= '${start}'`
+        }
+        if (end) {
+            query += ` AND due_date <= '${end}'`
+        }
+        if (priority) {
+            query += ` AND priority = '${priority}'`
+        }
+        db.query(query, (err, fields)=>{
+            if (err) {
+                return ResponseServerError(err, res)
+            }
+            datas = fields.rows
+            res.status(200).json({
+                "message": `Data Dengan User id ${user_id} Berhasil Diambil`,
+                "datas": datas
+            })
+        })
+    } else {
+        db.query(`SELECT todo_id, title, description, to_char(due_date, 'YYYY-MM-DD') as due_date , priority, is_completed FROM todos_tbl WHERE user_id = ${user_id}`, (err, fields) =>{
+            if (err) {
+                return ResponseServerError(err, res)
+            }
+            if (fields.rowCount === 0 ){
+                ResponseMessageServer(404, "User ini belum pernah membuat to do list", res)
+            } else {
+                const datas = fields.rows
+                res.status(200).json({
+                    "message": "Data berhasil didapatkan",
+                    "datas": datas,
+                    "total": fields.rowCount
+                })
+            }
+        })
+    }
+    
 })  
 
 app.post('/todos', validationAccess, (req,res) =>{
     const { user_id } = req.user
-    let { title, description, due_date, priority, is_completed } = req.body
+    let { title, description, due_date, priority, is_completed} = req.body
     if ( !title ) {
         return ResponseMessageServer(403, "Title tidak boleh kosong", res)
     }
@@ -153,7 +194,7 @@ app.post('/todos', validationAccess, (req,res) =>{
     priority = priority ?? null
     is_completed = is_completed ?? null
     console.log(user_id,title, description, priority, due_date, is_completed)
-    db.query(`INSERT INTO todos_tbl (user_id, title, description, due_date, priority, is_completed) VALUES (${user_id}, $1, $2, $3, $4, $5) RETURNING todo_id, title, description, due_date, priority, is_completed`,[title, description, due_date, priority, is_completed], (err, fields) =>{
+    db.query(`INSERT INTO todos_tbl (user_id, title, description, due_date, priority, is_completed) VALUES (${user_id}, $1, $2, $3, $4, $5) RETURNING todo_id, title, description, to_char(due_date, 'YYYY-MM-DD'), priority, is_completed`,[title, description, due_date, priority, is_completed], (err, fields) =>{
         if (err) {
             return ResponseServerError(err, res)
         } else {
@@ -164,6 +205,168 @@ app.post('/todos', validationAccess, (req,res) =>{
             })
         }
     })
+})
+
+app.get('/todos/today', validationAccess, (req, res)=>{
+    const {user_id} = req.user
+    const search = req.query.search
+    const {is_completed, start, end, priority} = req.query
+    if (search) {
+        db.query(`SELECT todo_id, title, description, to_char(due_date, 'YYYY-MM-DD') as due_date , priority, is_completed FROM todos_tbl WHERE user_id = ${user_id} AND title ILIKE '%${search}%'`, (err, fields)=>{
+            if (err) {
+                return ResponseServerError(err, res)
+            }
+            datas = fields.rows
+            res.status(200).json({
+                "message": `Data Dengan User id ${user_id} Berhasil Diambil`,
+                "datas": datas
+            })
+        })
+    } else if (is_completed || start || end || priority) {
+        let query = `SELECT todo_id, title, description, to_char(due_date, 'YYYY-MM-DD') as due_date , priority, is_completed FROM todos_tbl WHERE user_id = ${user_id}`
+        if (is_completed) {
+            query += ` AND is_completed = '${is_completed}'`
+        }
+        if (start) {
+            query += ` AND due_date >= '${start}'`
+        }
+        if (end) {
+            query += ` AND due_date <= '${end}'`
+        }
+        if (priority) {
+            query += ` AND priority = '${priority}'`
+        }
+        db.query(query, (err, fields)=>{
+            if (err) {
+                return ResponseServerError(err, res)
+            }
+            datas = fields.rows
+            res.status(200).json({
+                "message": `Data Dengan User id ${user_id} Berhasil Diambil`,
+                "datas": datas
+            })
+        })
+    } else {
+        db.query(`SELECT todo_id, title, description, to_char(due_date, 'YYYY-MM-DD') as due_date , priority, is_completed FROM todos_tbl where user_id = ${user_id} AND due_date = to_char(now(), 'YYYY-MM-DD')::DATE`, (err,fields)=>{
+            if (err) {
+                return ResponseServerError
+            } else {
+                datas = fields.rows
+                res.status(200).json({
+                    "message": `Data Dengan User id ${user_id} Berhasil Diambil`,
+                    "datas": datas
+                })
+            }
+        })
+    }  
+})
+
+app.get('/todos/high_priority', validationAccess, (req, res)=>{
+    const {user_id} = req.user
+    const search = req.query.search
+    const {is_completed, start, end, priority} = req.query
+    if (search) {
+        db.query(`SELECT todo_id, title, description, to_char(due_date, 'YYYY-MM-DD') as due_date , priority, is_completed FROM todos_tbl WHERE user_id = ${user_id} AND title ILIKE '%${search}%'`, (err, fields)=>{
+            if (err) {
+                return ResponseServerError(err, res)
+            }
+            datas = fields.rows
+            res.status(200).json({
+                "message": `Data Dengan User id ${user_id} Berhasil Diambil`,
+                "datas": datas
+            })
+        })
+    } else if (is_completed || start || end || priority) {
+        let query = `SELECT todo_id, title, description, to_char(due_date, 'YYYY-MM-DD') as due_date , priority, is_completed FROM todos_tbl WHERE user_id = ${user_id}`
+        if (is_completed) {
+            query += ` AND is_completed = '${is_completed}'`
+        }
+        if (start) {
+            query += ` AND due_date >= '${start}'`
+        }
+        if (end) {
+            query += ` AND due_date <= '${end}'`
+        }
+        if (priority) {
+            query += ` AND priority = '${priority}'`
+        }
+        db.query(query, (err, fields)=>{
+            if (err) {
+                return ResponseServerError(err, res)
+            }
+            datas = fields.rows
+            res.status(200).json({
+                "message": `Data Dengan User id ${user_id} Berhasil Diambil`,
+                "datas": datas
+            })
+        })
+    } else {
+        db.query(`SELECT todo_id, title, description, to_char(due_date, 'YYYY-MM-DD') as due_date , priority, is_completed FROM todos_tbl where user_id = ${user_id} AND priority ='High' `, (err,fields)=>{
+            if (err) {
+                return ResponseServerError
+            } else {
+                datas = fields.rows
+                res.status(200).json({
+                    "message": `Data Dengan User id ${user_id} Berhasil Diambil`,
+                    "datas": datas
+                })
+            }
+        })
+    }
+})
+
+app.get('/todos/completed', validationAccess, (req, res)=>{
+    const {user_id} = req.user
+    const search = req.query.search
+    const {is_completed, start, end, priority} = req.query
+    if (search) {
+        db.query(`SELECT todo_id, title, description, to_char(due_date, 'YYYY-MM-DD') as due_date , priority, is_completed FROM todos_tbl WHERE user_id = ${user_id} AND title ILIKE '%${search}%'`, (err, fields)=>{
+            if (err) {
+                return ResponseServerError(err, res)
+            }
+            datas = fields.rows
+            res.status(200).json({
+                "message": `Data Dengan User id ${user_id} Berhasil Diambil`,
+                "datas": datas
+            })
+        })
+    } else if (is_completed || start || end || priority) {
+        let query = `SELECT todo_id, title, description, to_char(due_date, 'YYYY-MM-DD') as due_date , priority, is_completed FROM todos_tbl WHERE user_id = ${user_id}`
+        if (is_completed) {
+            query += ` AND is_completed = '${is_completed}'`
+        }
+        if (start) {
+            query += ` AND due_date >= '${start}'`
+        }
+        if (end) {
+            query += ` AND due_date <= '${end}'`
+        }
+        if (priority) {
+            query += ` AND priority = '${priority}'`
+        }
+        db.query(query, (err, fields)=>{
+            if (err) {
+                return ResponseServerError(err, res)
+            }
+            datas = fields.rows
+            res.status(200).json({
+                "message": `Data Dengan User id ${user_id} Berhasil Diambil`,
+                "datas": datas
+            })
+        })
+    } else {
+        db.query(`SELECT todo_id, title, description, to_char(due_date, 'YYYY-MM-DD') as due_date , priority, is_completed FROM todos_tbl where user_id = ${user_id} AND is_completed = 'done' `, (err,fields)=>{
+            if (err) {
+                return ResponseServerError
+            } else {
+                datas = fields.rows
+                res.status(200).json({
+                    "message": `Data Dengan User id ${user_id} Berhasil Diambil`,
+                    "datas": datas
+                })
+            }
+        })
+    }
 })
 
 app.get('/todos/:id', validationAccess, (req,res) =>{
