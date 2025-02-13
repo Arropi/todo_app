@@ -3,13 +3,15 @@ require('dotenv').config()
 const port = 3000
 const app = express()
 const body = require('body-parser')
-const db = require('./connection')
+const db = require('./services/connection')
 const bcrypt = require('bcryptjs')
 const ResponseServerError = require('./controller/responseServerError')
 const ResponseMessageServer = require('./controller/responseMessage')
 const jwt = require('jsonwebtoken')
+const cors = require('cors')
 
 app.use(body.json())
+app.use(cors())
 
 db.connect(err=> {
     if (err) {
@@ -254,7 +256,8 @@ app.get('/todos/today', validationAccess, (req, res)=>{
                 datas = fields.rows
                 res.status(200).json({
                     "message": `Data Dengan User id ${user_id} Berhasil Diambil`,
-                    "datas": datas
+                    "datas": datas,
+                    "total": fields.rowCount
                 })
             }
         })
@@ -308,7 +311,8 @@ app.get('/todos/high_priority', validationAccess, (req, res)=>{
                 datas = fields.rows
                 res.status(200).json({
                     "message": `Data Dengan User id ${user_id} Berhasil Diambil`,
-                    "datas": datas
+                    "datas": datas,
+                    "total": fields.rowCount
                 })
             }
         })
@@ -362,7 +366,8 @@ app.get('/todos/completed', validationAccess, (req, res)=>{
                 datas = fields.rows
                 res.status(200).json({
                     "message": `Data Dengan User id ${user_id} Berhasil Diambil`,
-                    "datas": datas
+                    "datas": datas,
+                    "total": fields.rowCount
                 })
             }
         })
@@ -413,7 +418,7 @@ app.put('/todos/:id', validationAccess, (req,res) =>{
     })
 })
 
-app.delete('/todos/:id', (req,res) =>{
+app.delete('/todos/:id', validationAccess, (req,res) =>{
     const { user_id } = req.user
     const todo_id = req.params.id
     db.query(`DELETE FROM todos_tbl WHERE user_id = ${user_id} AND todo_id = ${todo_id}`, (err, fields) =>{
