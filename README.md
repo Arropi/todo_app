@@ -7,7 +7,6 @@ A simple and efficient task management application deployed on **Vercel**, with 
 - **Database:** PostgreSQL (hosted on Railway)  
 - **Authentication:** JWT (JSON Web Token)  
 - **Frontend:** (If applicable, specify here)  
-
 ## Database Schema  
 The application consists of two main tables:  
 
