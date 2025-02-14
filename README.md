@@ -463,7 +463,7 @@ The application consists of two main tables:
   ```json
   {
     "message": "Membutuhkan token"
-}
+  }
   ```
 
     - **If Token Invalid or Expired:** 
