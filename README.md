@@ -208,7 +208,7 @@ The application consists of two main tables:
     "due_date": "2025-02-02", (Optional)
     "is_completed": "done", (Optional)
     "priority": "High" (Optional)
-}
+  }
   ```
 - **Response:**
   - **If Created Succesfully:**
@@ -248,7 +248,7 @@ The application consists of two main tables:
         }
     ],
     "total": 1
-}
+  }
   ```
 
     ---
@@ -270,7 +270,7 @@ The application consists of two main tables:
             "is_completed": "in progress"
         }
     ]
-}
+  }
   ```
 
     - **If The Todos Not Found:** 
@@ -298,7 +298,7 @@ The application consists of two main tables:
     "due_date":  "2025-01-08",
     "is_completed": "in progress",
     "priority": "Low"
-}
+  }
   ```
 - **Response:**
     - **If The Todos Not Found:** 
@@ -364,3 +364,150 @@ The application consists of two main tables:
 
 ## **Accsess for our direct filtering:**
     
+### 1. Get Todos for Today
+**Endpoint:** `GET /todos/today`  
+**Description:** Getting all task with the deadline at that day.
+
+
+#### **Response**
+```json
+{
+    "message": "Data Dengan User id 10 Berhasil Diambil",
+    "datas": [
+        {
+            "todo_id": 1,
+            "title": "Belajar Express.js",
+            "description": "Mengerjakan tugas backend",
+            "due_date": "2025-02-13",
+            "priority": "High",
+            "is_completed": "done"
+        },
+        {
+            "todo_id": 5,
+            "title": "Belajar React.js",
+            "description": "Mengerjakan tugas frontend",
+            "due_date": "2025-02-13",
+            "priority": "High",
+            "is_completed": "in progress"
+        }
+    ],
+    "total": 1
+}
+ ```   
+ ---
+
+### 2. Get High Priority Todos
+**Endpoint:** `GET /todos/high_priority`  
+**Descri[tion:** Getting all todo list with priority level **High**.
+
+
+#### **Response**
+```json
+{
+    "message": "Data Dengan User id 13 Berhasil Diambil",
+    "datas": [
+        {
+            "todo_id": 2,
+            "title": "Selesaikan laporan proyek",
+            "description": "Mengumpulkan laporan final",
+            "due_date": "2025-02-15",
+            "priority": "High",
+            "is_completed": "in progress"
+        }
+    ],
+    "total": 1
+}
+```
+
+---
+
+### 3. Get Completed Todos
+**Endpoint:** `GET /todos/completed`  
+**Deskripsi:** Getting all todo list with the status completion **done**.
+
+
+
+#### **Response**
+```json
+{
+    "message": "Data Dengan User id 15 Berhasil Diambil",
+    "datas": [
+        {
+            "todo_id": 3,
+            "title": "Belajar Node.js",
+            "description": "Menyelesaikan modul dasar Node.js",
+            "due_date": "2025-02-10",
+            "priority": "Medium",
+            "is_completed": "done"
+        },
+        {
+            "todo_id": 7,
+            "title": "Submit laporan mingguan",
+            "description": "Mengunggah laporan ke sistem",
+            "due_date": "2025-02-12",
+            "priority": "High",
+            "is_completed": "done"
+        }
+    ],
+    "total": 2
+}
+```
+---
+
+## **Additional Information**
+### **When Server Error Will Be Give 505 Status**
+### **Every API Endpoints except register and login need Authorization token**
+#### **With Validate Like:**
+- **Response:**
+    - **If Token Not Inserted:** 
+  ```json
+  {
+    "message": "Membutuhkan token"
+}
+  ```
+
+    - **If Token Invalid or Expired:** 
+  ```json
+  {
+    "messagge": "Authorize gagal"
+  }
+  ```
+#### **In every get method except spesific, it can filtering by hit query:**
+- `search=? `
+- **Date:**
+    - `start=? `
+    - `end=?`
+- `priority=?`
+- `is_completed`
+
+### **Filtering Access**
+#### **Query Parameters (Opsional)**
+| Parameter   | Tipe    | Deskripsi |
+|------------|--------|-----------|
+| `search`   | string | Search all todos by the title (case insensitive) |
+| `is_completed` | string | Filtering todos by status completion (e.g., 'done', 'in progress', 'not started') |
+| `priority` | string | Filtering todos by priority level (e.g., 'High', 'Low', 'Medium') |
+| `start` | string (YYYY-MM-DD) | Filtering todo list with due_date after a specified date or by a specified date |
+| `end` | string (YYYY-MM-DD) | Filtering todo list with due_date before a specified date or by a specified date |
+
+---
+
+## Deployment
+
+The application is deployed on Vercel. To deploy your own instance:
+
+1. **Fork the Repository**
+
+2. **Set Up Vercel Project**
+
+   - Log in to [Vercel](https://vercel.com/) and create a new project.
+   - Link it to your forked repository.
+
+3. **Configure Environment Variables on Vercel**
+
+   - In your Vercel dashboard, go to your project settings.
+   - Add the `DATABASE_URL` environment variable with your Railway database URL.
+
+4. **Deploy**
+
+   - Trigger a deployment from the Vercel dashboard.
